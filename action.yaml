@@ -29,16 +29,37 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Github
-      run: echo ${{ toJson(github) }}
-      shell: bash
-      
-    - name: Event
-      run: echo ${{ toJson(github.event) }}
-      shell: bash
-
     - name: Export Environment Variables
       uses: dmsi-io/gha-env-variables@v1
       with:
         TLD: ${{ inputs.TOP_LEVEL_DOMAIN }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
+
+    - name: Check branch exists
+      run: git ls-remote "git@github.com:${{ github.repository }}.git" "${{ github.ref }}"
+      shell: bash
+
+    - name: Check branch exists
+      run: git ls-remote "git@github.com:${{ github.repository_owner}}/door-maint-api.git" "${{ github.ref }}"
+      shell: bash
+
+    ###### GCloud Setup ######
+
+    - name: Setup GCloud Auth
+      id: auth
+      uses: google-github-actions/auth@v0.4.0
+      with:
+        credentials_json: ${{ inputs.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0.2.1
+
+    - name: Authenticate GKE cluster
+      run: gcloud container clusters get-credentials ${{ inputs.GKE_CLUSTER_NAME }} --zone ${{ inputs.GCP_ZONE }} --project ${{ inputs.GCP_PROJECT_ID }}
+      shell: bash
+
+    ###### Deploy Kubernetes Artifacts ######
+
+    - name: Print Deployments
+      run: kubectl get -o=name deployment -n $NAMESPACE
+      shell: bash
