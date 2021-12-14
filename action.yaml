@@ -144,7 +144,7 @@ runs:
       run: |
         REPOS="${{ inputs.repos }}"
 
-        for n in $(kubectl get deployments -o=name -n $FROM_NAMESPACE)
+        for n in $(kubectl get deployments -o=name -n $NAMESPACE)
         do
             NON_DEP_FOUND=true
 
