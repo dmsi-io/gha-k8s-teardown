@@ -29,8 +29,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Github
+      run: echo ${{ toJson(github) }}
+      shell: bash
+      
     - name: Event
-      run: echo "${{ parseJSON(github) }}"
+      run: echo ${{ toJson(github.event) }}
       shell: bash
 
     - name: Export Environment Variables
