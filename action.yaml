@@ -108,6 +108,11 @@ runs:
           export PORT=$(kubectl get $n -n $FROM_NAMESPACE -o json \
                   | jq -r '.spec.ports[].port')
 
+          echo "EXTERNAL_SERVICE=$EXTERNAL_SERVICE"
+          echo "TO_NAMESPACE=$TO_NAMESPACE"
+          echo "FROM_NAMESPACE=$FROM_NAMESPACE"
+          echo "PORT=$PORT"
+          cat external-service-template.yaml | envsubst
           cat external-service-template.yaml | envsubst | kubectl apply -f - 
         else 
           echo "could not find $SERVICE_NAME service in $FROM_NAMESPACE"
