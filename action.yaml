@@ -50,8 +50,11 @@ runs:
         for repo in ${REPOS//,/ }
         do
           echo "checking $repo"
-          OUTPUT=$(git ls-remote "https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}" --exit-code)
-          echo $OUTPUT
+          if [[ $(git ls-remote "https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
+            echo "if condition"
+          else
+            echo "else condition"
+          fi 
         done
       shell: bash
 
