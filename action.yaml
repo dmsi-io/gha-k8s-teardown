@@ -165,33 +165,17 @@ runs:
         done
       shell: bash
 
-    - name: Teardown Namespace Branch
-      if: steps.branch-check.outputs.branch-exists != 'true'
-      run: |
-        echo "tearing down branch namespace..."
-      shell: bash
-
-    - name: Skip Teardown Namespace Branch
-      if: steps.branch-check.outputs.branch-exists == 'true'
-      run: |
-        echo "skipping branch namespace teardown..."
-      shell: bash
-
-    - name: Teardown Namespace Deployment
-      if: steps.deployment-check.outputs.deployment-exists != 'true'
-      run: |
-        echo "tearing down deployment namespace..."
-      shell: bash
-
-    - name: Skip Teardown Namespace Deployment
-      if: steps.deployment-check.outputs.deployment-exists == 'true'
-      run: |
-        echo "skipping deployment namespace teardown..."
-      shell: bash
-
     - name: Teardown Namespace
       if: steps.deployment-check.outputs.deployment-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
       run: |
-        echo "tearing down namespace..."
+        if [[ $(kubectl get namespace -o=name $NAMESPACE --ignore-not-found) ]]; then
+          kubectl delete namespace $NAMESPACE
+        fi
+      shell: bash
+
+    - name: Skipping Teardown Namespace
+      if: steps.deployment-check.outputs.deployment-exists == 'true' || steps.deployment-check.outputs.deployment-exists == 'true'
+      run: |
+        echo "The $NAMESPACE namespace included resources that are unsafe to teardown. Close branches of the same name, ${{ github.ref_name }}, in other repositories to teardown namespace."
       shell: bash
       
