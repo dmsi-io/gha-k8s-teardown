@@ -127,6 +127,7 @@ runs:
           if [[ $(kubectl get deployment $REPO_SERVICE -n $NAMESPACE -o=name --ignore-not-found) ]]; then
 
             if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
+              echo "found ${{ github.ref }} branch in ${{ github.repository_owner}}/$repo"
               echo "::set-output name=branch-exists::true"
             else
               echo "could not find ${{ github.ref }} in ${{ github.repository_owner}}/$repo"
@@ -138,15 +139,59 @@ runs:
         done
       shell: bash
 
-    - name: Teardown Namespace'
-      if: steps.branch-check.outputs.branch-exists != 'true'
+    - name: Check for deployments
+      id: deployment-check # use this to check for `deployment-exists` (`steps.deployment-check.outputs.deployment-exists != 'true'`)
       run: |
-        echo "tearing down namespace..."
+        REPOS="${{ inputs.repos }}"
+
+        for n in $(kubectl get deployments -o=name -n $FROM_NAMESPACE)
+        do
+            NON_DEP_FOUND=true
+
+            for repo in ${REPOS//,/ }
+            do
+              REPO_SERVICE=$(gha-env-variables/clean_variable.sh $repo)
+
+              if [[ ${n##*/} == $REPO_SERVICE ]]; then
+                echo "$n found as repo dependency"
+                NON_DEP_FOUND=false
+              fi
+            done
+
+            if [[ $NON_DEP_FOUND == 'true' ]]
+              echo "$n found as non-dependency"
+              echo "::set-output name=deployment-exists::true"
+            fi
+        done
       shell: bash
 
-    - name: Teardown Namespace'
+    - name: Teardown Namespace Branch
+      if: steps.branch-check.outputs.branch-exists != 'true'
+      run: |
+        echo "tearing down branch namespace..."
+      shell: bash
+
+    - name: Skip Teardown Namespace Branch
       if: steps.branch-check.outputs.branch-exists == 'true'
       run: |
-        echo "skipping namespace teardown..."
+        echo "skipping branch namespace teardown..."
+      shell: bash
+
+    - name: Teardown Namespace Deployment
+      if: steps.deployment-check.outputs.deployment-exists != 'true'
+      run: |
+        echo "tearing down deployment namespace..."
+      shell: bash
+
+    - name: Skip Teardown Namespace Deployment
+      if: steps.deployment-check.outputs.deployment-exists == 'true'
+      run: |
+        echo "skipping deployment namespace teardown..."
+      shell: bash
+
+    - name: Teardown Namespace
+      if: steps.deployment-check.outputs.deployment-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
+      run: |
+        echo "tearing down namespace..."
       shell: bash
       
