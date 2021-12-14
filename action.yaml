@@ -102,7 +102,7 @@ runs:
 
     - name: Replace Service with ExternalName
       run: |
-        if [[ $(kubectl get service $SERVICE_NAME -n $NAMESPACE -o=name --ignore-not-found) ]]; then 
+        if [[ $(kubectl get service $SERVICE_NAME -n $FROM_NAMESPACE -o=name --ignore-not-found) ]]; then 
           export EXTERNAL_SERVICE=$SERVICE_NAME
           export TO_NAMESPACE=$NAMESPACE
           export PORT=$(kubectl get $n -n $FROM_NAMESPACE -o json \
@@ -110,7 +110,7 @@ runs:
 
           cat external-service-template.yaml | envsubst | kubectl apply -f - 
         else 
-          echo "could not find $SERVICE_NAME service in $NAMESPACE"
+          echo "could not find $SERVICE_NAME service in $FROM_NAMESPACE"
         fi
       shell: bash
       working-directory: gha-k8s-namespace/k8s
