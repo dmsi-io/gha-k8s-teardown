@@ -17,10 +17,18 @@ inputs:
   GCP_PROJECT_ID:
     description: 'GCP Project ID'
     required: true
+
+  GHA_ACCESS_USER: 
+    description: 'GitHub Actions Access Username'
+    required: false
+
+  GHA_ACCESS_TOKEN:
+    description: 'GitHub Actions Access Token'
+    required: false
     
   TLD:
     description: 'Top Level Domain to create subdomain on.'
-    required: true
+    required: false
 
   repos:
     description: 'Comma separated list of repositories that are deployed concurrently and require extra checks before tearing down.'
@@ -32,8 +40,13 @@ runs:
     - name: Export Environment Variables
       uses: dmsi-io/gha-env-variables@v1
       with:
-        TLD: ${{ inputs.TOP_LEVEL_DOMAIN }}
+        TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
+
+    - name: Configure git for private modules
+      if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
+      run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+      shell: bash
 
     - name: Check branch exists
       run: git ls-remote "git@github.com:${{ github.repository }}.git" "${{ github.ref }}"

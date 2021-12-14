@@ -16,4 +16,5 @@ jobs:
           GKE_CLUSTER_NAME: ${{ secrets.GCP_STAGING_CLUSTER_NAME }}
           GCP_ZONE: ${{ secrets.GCP_ZONE }}
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          TLD: ${{ secrets.TOP_LEVEL_DOMAIN }}
+          GHA_ACCESS_USER: ${{ secrets.GHA_ACCESS_USER }}
+          GHA_ACCESS_TOKEN: ${{ secrets.GHA_ACCESS_TOKEN }}
