@@ -30,11 +30,6 @@ inputs:
     description: 'Top Level Domain to create subdomain on.'
     required: false
 
-  FROM_NAMESPACE: 
-    description: 'Allows to override the desired NAMESPACE variable'
-    required: false
-    default: ${{ github.event.repository.default_branch }}
-
   repos:
     description: 'Comma separated list of repositories that are deployed concurrently and require extra checks before tearing down.'
     required: false
@@ -42,49 +37,27 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: dmsi-io/gha-env-variables
+        path: gha-env-variables
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: dmsi-io/gha-k8s-namespace
+        path: gha-k8s-namespace
+
     - name: Export Environment Variables
       uses: dmsi-io/gha-env-variables@v1
       with:
         TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
 
-    - name: FROM_NAMESPACE
-      run: |
-        FROM_NAMESPACE=$(gha-env-variables/clean_variable.sh ${{ inputs.FROM_NAMESPACE }})
-        echo "FROM_NAMESPACE=$FROM_NAMESPACE"
-
-        echo "FROM_NAMESPACE=$FROM_NAMESPACE" >> $GITHUB_ENV
-      shell: bash
-
-    ###### Check open repo branches ######
-
     - name: Configure git for private modules
       if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
       run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
-      shell: bash
-
-    - name: Check branch exists
-      id: branch-exists # use this to check for `branch-exists` (`steps.branch-exists.outputs.$repo != true`)
-      run: |
-        REPOS="${{ inputs.repos }}"
-        for repo in ${REPOS//,/ }
-        do
-          echo "checking $repo"
-          if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
-            echo "::set-output name=$repo::true"
-          else
-            echo "could not find ${{ github.ref }} in ${{ github.repository_owner}}/$repo"
-          fi 
-        done
-      shell: bash
-
-    - name: Print output of each repo
-      run: |
-        REPOS="${{ inputs.repos }}"
-        for repo in ${REPOS//,/ }
-        do
-          echo "$repo: ${{ steps.branch-exists.outputs.$repo }}"
-        done
       shell: bash
 
     ###### GCloud Setup ######
@@ -108,25 +81,48 @@ runs:
       run: kubectl delete deployment $SERVICE_NAME -n $NAMESPACE
       shell: bash
 
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        repository: dmsi-io/gha-k8s-namespace
-        path: k8s-namespace
-
     - run: cat external-service-template.yaml | envsubst
       working-directory: gha-k8s-namespace/k8s
       shell: bash
 
     - name: Replace Service with ExternalName
       run: |
-        if [[ $(kubectl get service $SERVICE_NAME -n $FROM_NAMESPACE -o=name --ignore-not-found) ]]; then 
+        if [[ $(kubectl get service $SERVICE_NAME -n $NAMESPACE -o=name --ignore-not-found) ]]; then 
           export EXTERNAL_SERVICE=${n##*/}
-          export PORT=$(kubectl get $n -n $FROM_NAMESPACE -o json \
+          export PORT=$(kubectl get $n -n $NAMESPACE -o json \
                   | jq -r '.spec.ports[].port')
 
           cat external-service-template.yaml | envsubst | kubectl apply -f - 
         fi
       shell: bash
       working-directory: gha-k8s-namespace/k8s
+
+    - name: Check branch exists
+      id: branch-check # use this to check for `branch-exists` (`steps.branch-check.outputs.branch-exists != true`)
+      # Checks if a deployment exists in namespace, if so checks if a branch of the same name exists in that repo, if so will mark branch-exists as true
+      run: |
+        REPOS="${{ inputs.repos }}"
+        for repo in ${REPOS//,/ }
+        do
+          REPO_SERVICE=$(gha-env-variables/clean_variable.sh $repo)
+
+          if [[ $(kubectl get deployment $REPO_SERVICE -n $NAMESPACE -o=name --ignore-not-found) ]]; then
+
+            if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
+              echo "::set-output name=branch-exists::true"
+            else
+              echo "could not find ${{ github.ref }} in ${{ github.repository_owner}}/$repo"
+            fi 
+
+          else
+            echo "$REPO_SERVICE not found in $NAMESPACE"
+          fi
+        done
+      shell: bash
+
+    - name: Teardown Namespace'
+      if: steps.branch-check.outputs.branch-exists != true
+      run: |
+        echo "tearing down namespace..."
+      shell: bash
       
