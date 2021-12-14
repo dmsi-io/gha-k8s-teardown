@@ -56,7 +56,7 @@ runs:
         do
           echo "checking $repo"
           if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
-            echo "::set-output branch-exists=dir::true"
+            echo "::set-output name=branch-exists::true"
           else
             echo "could not find ${{ github.ref }} in ${{ github.repository_owner}}/$repo"
           fi 
