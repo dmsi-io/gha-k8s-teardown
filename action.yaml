@@ -105,7 +105,7 @@ runs:
         if [[ $(kubectl get service $SERVICE_NAME -n $NAMESPACE -o=name --ignore-not-found) ]]; then 
           export EXTERNAL_SERVICE=$SERVICE_NAME
           export TO_NAMESPACE=$NAMESPACE
-          export PORT=$(kubectl get $n -n $NAMESPACE -o json \
+          export PORT=$(kubectl get $n -n $FROM_NAMESPACE -o json \
                   | jq -r '.spec.ports[].port')
 
           cat external-service-template.yaml | envsubst | kubectl apply -f - 
