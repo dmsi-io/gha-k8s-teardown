@@ -43,17 +43,16 @@ runs:
         TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
 
-    - name: Configure git for private modules
+    - name: Check branch exists
       if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
-      run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
-      shell: bash
-
-    - name: Check branch exists
-      run: git ls-remote "https://github.com/${{ github.repository_owner}}/door-maint-api.git" "${{ github.ref }}"
-      shell: bash
-
-    - name: Check branch exists
-      run: git ls-remote "${{ github.repository }}" "${{ github.ref }}"
+      run: |
+        REPOS="${{ inputs.repos }}"
+        for repo in ${REPOS//,/ }
+        do
+          echo "checking $repo"
+          OUTPUT=$(git ls-remote "https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}" --exit-code)
+          echo $OUTPUT
+        done
       shell: bash
 
     ###### GCloud Setup ######
