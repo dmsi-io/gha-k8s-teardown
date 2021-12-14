@@ -18,4 +18,4 @@ jobs:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GHA_ACCESS_USER: ${{ secrets.GHA_ACCESS_USER }}
           GHA_ACCESS_TOKEN: ${{ secrets.GHA_ACCESS_TOKEN }}
-          repos: door-maint-api, graphql-api, gha-k8s-teardown
+          repos: door-maint-api, graphql-api, gha-k8s-teardown, bad-test
