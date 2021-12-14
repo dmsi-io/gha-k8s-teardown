@@ -68,8 +68,13 @@ runs:
       run: echo steps.branch-check.outputs.branch-exists
       shell: bash
 
-    - name: Print branch-exists
+    - name: Use if boolean true
+      if: steps.branch-check.outputs.branch-exists != true
       run: echo steps.branch-check.outputs.branch-exists
+      shell: bash
+
+    - name: Print branch-exists
+      run: echo ${{ steps.branch-check.outputs.branch-exists }}
       shell: bash
 
     ###### GCloud Setup ######
