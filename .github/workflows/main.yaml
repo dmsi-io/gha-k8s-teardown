@@ -1,0 +1,19 @@
+name: Test gha-k8s-teardown
+
+on:
+  - push
+  - delete
+
+jobs:
+  setup-build-publish-deploy:
+    name: Test gha-k8s-teardown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test gha-k8s-teardown
+        uses: dmsi-io/gha-k8s-teardown@feature/KNOX-186
+        with:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GKE_CLUSTER_NAME: ${{ secrets.GCP_STAGING_CLUSTER_NAME }}
+          GCP_ZONE: ${{ secrets.GCP_ZONE }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          TLD: ${{ secrets.TOP_LEVEL_DOMAIN }}

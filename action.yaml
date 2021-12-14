@@ -1,0 +1,40 @@
+name: 'Teardown Kubernetes Namespace'
+description: 'After creating new namespaces via GHA, it is important to cleanup the Kubernetes cluster. This action will manage the cleanup process of a feature namespace.'
+
+inputs:
+  GCP_SA_KEY: 
+    description: 'GCP Service Account Key (JSON)'
+    required: true
+
+  GKE_CLUSTER_NAME:
+    description: 'Google Kubernetes Engine Cluster name'
+    required: true
+
+  GCP_ZONE: 
+    description: 'GCP Zone'
+    required: true
+
+  GCP_PROJECT_ID:
+    description: 'GCP Project ID'
+    required: true
+    
+  TLD:
+    description: 'Top Level Domain to create subdomain on.'
+    required: true
+
+  repos:
+    description: 'Comma separated list of repositories that are deployed concurrently and require extra checks before tearing down.'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Event
+      run: echo "${{ parseJSON(github) }}"
+      shell: bash
+
+    - name: Export Environment Variables
+      uses: dmsi-io/gha-env-variables@v1
+      with:
+        TLD: ${{ inputs.TOP_LEVEL_DOMAIN }}
+        GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
