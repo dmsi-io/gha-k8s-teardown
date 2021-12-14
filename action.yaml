@@ -78,7 +78,12 @@ runs:
     ###### Teardown Kubernetes Artifacts ######
 
     - name: Remove Repo Deployment
-      run: kubectl delete deployment $SERVICE_NAME -n $NAMESPACE
+      run: |
+        if [[ $(kubectl get deployment $SERVICE_NAME -n $NAMESPACE -o=name --ignore-not-found) ]]; then 
+          kubectl delete deployment $SERVICE_NAME -n $NAMESPACE
+        else
+          echo "could not find $SERVICE_NAME deployment in $NAMESPACE"
+        fi 
       shell: bash
 
     - run: cat external-service-template.yaml | envsubst
@@ -93,6 +98,8 @@ runs:
                   | jq -r '.spec.ports[].port')
 
           cat external-service-template.yaml | envsubst | kubectl apply -f - 
+        else 
+          echo "could not find $SERVICE_NAME service in $NAMESPACE"
         fi
       shell: bash
       working-directory: gha-k8s-namespace/k8s
