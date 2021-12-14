@@ -30,6 +30,11 @@ inputs:
     description: 'Top Level Domain to create subdomain on.'
     required: false
 
+  FROM_NAMESPACE: 
+    description: 'Allows to override the desired NAMESPACE variable'
+    required: false
+    default: ${{ github.event.repository.default_branch }}
+
   repos:
     description: 'Comma separated list of repositories that are deployed concurrently and require extra checks before tearing down.'
     required: false
@@ -37,6 +42,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    ###### Setup Environment ######
     - name: Checkout
       uses: actions/checkout@v2
       with:
@@ -54,6 +60,14 @@ runs:
       with:
         TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
+
+    - name: FROM_NAMESPACE
+      run: |
+        FROM_NAMESPACE=$(gha-env-variables/clean_variable.sh ${{ inputs.FROM_NAMESPACE }})
+        echo "FROM_NAMESPACE=$FROM_NAMESPACE"
+
+        echo "FROM_NAMESPACE=$FROM_NAMESPACE" >> $GITHUB_ENV
+      shell: bash
 
     - name: Configure git for private modules
       if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
@@ -86,14 +100,11 @@ runs:
         fi 
       shell: bash
 
-    - run: cat external-service-template.yaml | envsubst
-      working-directory: gha-k8s-namespace/k8s
-      shell: bash
-
     - name: Replace Service with ExternalName
       run: |
         if [[ $(kubectl get service $SERVICE_NAME -n $NAMESPACE -o=name --ignore-not-found) ]]; then 
-          export EXTERNAL_SERVICE=${n##*/}
+          export EXTERNAL_SERVICE=$SERVICE_NAME
+          export TO_NAMESPACE=$NAMESPACE
           export PORT=$(kubectl get $n -n $NAMESPACE -o json \
                   | jq -r '.spec.ports[].port')
 
@@ -105,7 +116,7 @@ runs:
       working-directory: gha-k8s-namespace/k8s
 
     - name: Check branch exists
-      id: branch-check # use this to check for `branch-exists` (`steps.branch-check.outputs.branch-exists != true`)
+      id: branch-check # use this to check for `branch-exists` (`steps.branch-check.outputs.branch-exists != 'true'`)
       # Checks if a deployment exists in namespace, if so checks if a branch of the same name exists in that repo, if so will mark branch-exists as true
       run: |
         REPOS="${{ inputs.repos }}"
@@ -128,8 +139,14 @@ runs:
       shell: bash
 
     - name: Teardown Namespace'
-      if: steps.branch-check.outputs.branch-exists != true
+      if: steps.branch-check.outputs.branch-exists != 'true'
       run: |
         echo "tearing down namespace..."
+      shell: bash
+
+    - name: Teardown Namespace'
+      if: steps.branch-check.outputs.branch-exists == 'true'
+      run: |
+        echo "skipping namespace teardown..."
       shell: bash
       
