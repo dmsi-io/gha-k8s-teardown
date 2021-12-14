@@ -43,19 +43,33 @@ runs:
         TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
 
-    - name: Check branch exists
+    - name: Configure git for private modules
       if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
+      run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+      shell: bash
+
+    - name: Check branch exists
+      id: branch-check # use this to check for `branch-exists` (`steps.branch-check.outputs.branch-exists != 'true'`)
       run: |
         REPOS="${{ inputs.repos }}"
         for repo in ${REPOS//,/ }
         do
           echo "checking $repo"
-          if [[ $(git ls-remote "https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
-            echo "if condition"
+          if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
+            echo "::set-output branch-exists=dir::true"
           else
-            echo "else condition"
+            echo "could not find ${{ github.ref }} in ${{ github.repository_owner}}/$repo"
           fi 
         done
+      shell: bash
+
+    - name: Use if true
+      if: steps.branch-check.outputs.branch-exists != 'true'
+      run: echo steps.branch-check.outputs.branch-exists
+      shell: bash
+
+    - name: Print branch-exists
+      run: echo steps.branch-check.outputs.branch-exists
       shell: bash
 
     ###### GCloud Setup ######
