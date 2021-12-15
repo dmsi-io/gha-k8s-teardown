@@ -127,11 +127,11 @@ runs:
 
           if [[ $(kubectl get deployment $REPO_SERVICE -n $NAMESPACE -o=name --ignore-not-found) ]]; then
 
-            if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
-              echo "found ${{ github.ref }} branch in ${{ github.repository_owner}}/$repo"
+            if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.event.ref }}") ]]; then
+              echo "found ${{ github.event.ref }} branch in ${{ github.repository_owner}}/$repo"
               echo "::set-output name=branch-exists::true"
             else
-              echo "could not find ${{ github.ref }} in ${{ github.repository_owner}}/$repo"
+              echo "could not find ${{ github.event.ref }} in ${{ github.repository_owner}}/$repo"
             fi 
 
           else
@@ -177,6 +177,6 @@ runs:
     - name: Skipping Teardown Namespace
       if: steps.branch-check.outputs.branch-exists == 'true' || steps.deployment-check.outputs.deployment-exists == 'true'
       run: |
-        echo "The $NAMESPACE namespace included resources that are unsafe to teardown. Close branches of the same name, ${{ github.ref_name }}, in other repositories to teardown namespace."
+        echo "The $NAMESPACE namespace included resources that are unsafe to teardown. Close branches of the same name, ${{ github.event.ref }}, in other repositories to teardown namespace."
       shell: bash
       
