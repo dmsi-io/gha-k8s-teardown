@@ -42,6 +42,10 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Event
+      run: echo ${{ toJson(github.event) }}
+      shell: bash
+      
     ###### Setup Environment ######
     - name: Checkout
       uses: actions/checkout@v2
