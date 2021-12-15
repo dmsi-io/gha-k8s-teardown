@@ -169,7 +169,8 @@ runs:
       if: steps.deployment-check.outputs.deployment-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
       run: |
         if [[ $(kubectl get namespace -o=name $NAMESPACE --ignore-not-found) ]]; then
-          kubectl delete namespace $NAMESPACE
+          # kubectl delete namespace $NAMESPACE
+          echo "tearing down namespace..."
         fi
       shell: bash
 
