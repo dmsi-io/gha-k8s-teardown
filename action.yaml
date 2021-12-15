@@ -166,7 +166,7 @@ runs:
       shell: bash
 
     - name: Teardown Namespace
-      if: steps.deployment-check.outputs.deployment-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
+      if: steps.branch-check.outputs.branch-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
       run: |
         if [[ $(kubectl get namespace -o=name $NAMESPACE --ignore-not-found) ]]; then
           # kubectl delete namespace $NAMESPACE
@@ -175,7 +175,7 @@ runs:
       shell: bash
 
     - name: Skipping Teardown Namespace
-      if: steps.deployment-check.outputs.deployment-exists == 'true' || steps.deployment-check.outputs.deployment-exists == 'true'
+      if: steps.branch-check.outputs.branch-exists == 'true' || steps.deployment-check.outputs.deployment-exists == 'true'
       run: |
         echo "The $NAMESPACE namespace included resources that are unsafe to teardown. Close branches of the same name, ${{ github.ref_name }}, in other repositories to teardown namespace."
       shell: bash
