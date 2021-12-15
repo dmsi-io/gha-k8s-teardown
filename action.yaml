@@ -45,14 +45,13 @@ runs:
     - name: Event
       run: echo ${{ toJson(github.event) }}
       shell: bash
-      
+
     ###### Setup Environment ######
     - name: Checkout
       uses: actions/checkout@v2
       with:
         repository: dmsi-io/gha-env-variables
         path: gha-env-variables
-        NAMESPACE: ${{ github.event.ref }}
 
     - name: Checkout
       uses: actions/checkout@v2
@@ -65,6 +64,7 @@ runs:
       with:
         TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
+        NAMESPACE: ${{ github.event.ref }}
 
     - name: FROM_NAMESPACE
       run: |
