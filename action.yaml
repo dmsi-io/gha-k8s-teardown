@@ -48,6 +48,7 @@ runs:
       with:
         repository: dmsi-io/gha-env-variables
         path: gha-env-variables
+        NAMESPACE: ${{ github.event.ref }}
 
     - name: Checkout
       uses: actions/checkout@v2
