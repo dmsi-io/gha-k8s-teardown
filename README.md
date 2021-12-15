@@ -25,7 +25,7 @@ jobs:
           GHA_ACCESS_TOKEN: ${{ secrets.GHA_ACCESS_TOKEN }}
 ```
 
-> It is recommended create this GHA in its own yaml file with `delete` as the only trigger. This will only be ran if the action exists within the [default branch](https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows#delete).
+> It is recommended to create this GHA in its own yaml file with `delete` as the only trigger. This will only be ran if the action exists within the [default branch](https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows#delete).
 
 ### Optional inputs
 
