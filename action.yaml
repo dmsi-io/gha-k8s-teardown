@@ -142,6 +142,7 @@ runs:
 
     - name: Check for deployments
       id: deployment-check # use this to check for `deployment-exists` (`steps.deployment-check.outputs.deployment-exists != 'true'`)
+      # Checks all deployments in namespace, if a deployment found is not in the provided list of input repos then deployment-exists will be set to true
       run: |
         REPOS="${{ inputs.repos }}"
 
