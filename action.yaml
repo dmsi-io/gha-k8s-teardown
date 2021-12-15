@@ -69,10 +69,10 @@ runs:
         echo "FROM_NAMESPACE=$FROM_NAMESPACE" >> $GITHUB_ENV
       shell: bash
 
-    # - name: Configure git for private modules
-    #   if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
-    #   run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
-    #   shell: bash
+    - name: Configure git for private modules
+      if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
+      run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+      shell: bash
 
     ###### GCloud Setup ######
 
@@ -126,7 +126,7 @@ runs:
 
           if [[ $(kubectl get deployment $REPO_SERVICE -n $NAMESPACE -o=name --ignore-not-found) ]]; then
 
-            if [[ $(git ls-remote "https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
+            if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.ref }}") ]]; then
               echo "found ${{ github.ref }} branch in ${{ github.repository_owner}}/$repo"
               echo "::set-output name=branch-exists::true"
             else
@@ -169,8 +169,7 @@ runs:
       if: steps.branch-check.outputs.branch-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
       run: |
         if [[ $(kubectl get namespace -o=name $NAMESPACE --ignore-not-found) ]]; then
-          # kubectl delete namespace $NAMESPACE
-          echo "tearing down namespace..."
+          kubectl delete namespace $NAMESPACE
         fi
       shell: bash
 
