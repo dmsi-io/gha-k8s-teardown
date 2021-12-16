@@ -17,10 +17,23 @@ inputs:
   GCP_PROJECT_ID:
     description: 'GCP Project ID'
     required: true
+
+  GHA_ACCESS_USER: 
+    description: 'GitHub Actions Access Username'
+    required: false
+
+  GHA_ACCESS_TOKEN:
+    description: 'GitHub Actions Access Token'
+    required: false
     
   TLD:
     description: 'Top Level Domain to create subdomain on.'
-    required: true
+    required: false
+
+  FROM_NAMESPACE: 
+    description: 'Allows to override the desired NAMESPACE variable'
+    required: false
+    default: ${{ github.event.repository.default_branch }}
 
   repos:
     description: 'Comma separated list of repositories that are deployed concurrently and require extra checks before tearing down.'
@@ -29,16 +42,142 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Github
-      run: echo ${{ toJson(github) }}
-      shell: bash
-      
-    - name: Event
-      run: echo ${{ toJson(github.event) }}
-      shell: bash
+    ###### Setup Environment ######
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: dmsi-io/gha-env-variables
+        path: gha-env-variables
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: dmsi-io/gha-k8s-namespace
+        path: gha-k8s-namespace
 
     - name: Export Environment Variables
       uses: dmsi-io/gha-env-variables@v1
       with:
-        TLD: ${{ inputs.TOP_LEVEL_DOMAIN }}
+        TLD: ${{ inputs.TLD }}
         GCP_PROJECT_ID: ${{ inputs.GCP_PROJECT_ID }}
+        NAMESPACE: ${{ github.event.ref }}
+
+    - name: FROM_NAMESPACE
+      run: |
+        FROM_NAMESPACE=$(gha-env-variables/clean_variable.sh ${{ inputs.FROM_NAMESPACE }})
+        echo "FROM_NAMESPACE=$FROM_NAMESPACE"
+
+        echo "FROM_NAMESPACE=$FROM_NAMESPACE" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Configure git for private modules
+      if: inputs.GHA_ACCESS_USER != '' && inputs.GHA_ACCESS_TOKEN != ''
+      run: git config --global url."https://${{ inputs.GHA_ACCESS_USER }}:${{ inputs.GHA_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+      shell: bash
+
+    ###### GCloud Setup ######
+
+    - name: Setup GCloud Auth
+      id: auth
+      uses: google-github-actions/auth@v0.4.0
+      with:
+        credentials_json: ${{ inputs.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0.2.1
+
+    - name: Authenticate GKE cluster
+      run: gcloud container clusters get-credentials ${{ inputs.GKE_CLUSTER_NAME }} --zone ${{ inputs.GCP_ZONE }} --project ${{ inputs.GCP_PROJECT_ID }}
+      shell: bash
+
+    ###### Teardown Kubernetes Artifacts ######
+
+    - name: Remove Repo Deployment
+      run: |
+        if [[ $(kubectl get deployment $SERVICE_NAME -n $NAMESPACE -o=name --ignore-not-found) ]]; then 
+          kubectl delete deployment $SERVICE_NAME -n $NAMESPACE
+        else
+          echo "could not find $SERVICE_NAME deployment in $NAMESPACE"
+        fi 
+      shell: bash
+
+    - name: Replace Service with ExternalName
+      run: |
+        if [[ $(kubectl get service $SERVICE_NAME -n $FROM_NAMESPACE -o=name --ignore-not-found) ]]; then 
+          export EXTERNAL_SERVICE=$SERVICE_NAME
+          export TO_NAMESPACE=$NAMESPACE
+          export PORT=$(kubectl get service $SERVICE_NAME -n $FROM_NAMESPACE -o json \
+                  | jq -r '.spec.ports[].port')
+
+          cat external-service-template.yaml | envsubst | kubectl apply -f - 
+        else 
+          echo "could not find $SERVICE_NAME service in $FROM_NAMESPACE"
+        fi
+      shell: bash
+      working-directory: gha-k8s-namespace/k8s
+
+    - name: Check branch exists
+      id: branch-check # use this to check for `branch-exists` (`steps.branch-check.outputs.branch-exists != 'true'`)
+      # Checks if a deployment exists in namespace, if so checks if a branch of the same name exists in that repo, if so will mark branch-exists as true
+      run: |
+        REPOS="${{ inputs.repos }}"
+        for repo in ${REPOS//,/ }
+        do
+          REPO_SERVICE=$(gha-env-variables/clean_variable.sh $repo)
+
+          if [[ $(kubectl get deployment $REPO_SERVICE -n $NAMESPACE -o=name --ignore-not-found) ]]; then
+
+            if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.event.ref }}") ]]; then
+              echo "found ${{ github.event.ref }} branch in ${{ github.repository_owner}}/$repo"
+              echo "::set-output name=branch-exists::true"
+            else
+              echo "could not find ${{ github.event.ref }} in ${{ github.repository_owner}}/$repo"
+            fi 
+
+          else
+            echo "$REPO_SERVICE not found in $NAMESPACE"
+          fi
+        done
+      shell: bash
+
+    - name: Check for deployments
+      id: deployment-check # use this to check for `deployment-exists` (`steps.deployment-check.outputs.deployment-exists != 'true'`)
+      # Checks all deployments in namespace, if a deployment found is not in the provided list of input repos then deployment-exists will be set to true
+      run: |
+        REPOS="${{ inputs.repos }}"
+
+        for n in $(kubectl get deployments -o=name -n $NAMESPACE)
+        do
+            NON_DEP_FOUND=true
+
+            for repo in ${REPOS//,/ }
+            do
+              REPO_SERVICE=$(gha-env-variables/clean_variable.sh $repo)
+
+              if [[ ${n##*/} == $REPO_SERVICE ]]; then
+                echo "$n found as repo dependency"
+                NON_DEP_FOUND=false
+              fi
+            done
+
+            if [[ $NON_DEP_FOUND == 'true' ]]; then
+              echo "$n found as non-dependency"
+              echo "::set-output name=deployment-exists::true"
+            fi
+        done
+      shell: bash
+
+    - name: Teardown Namespace
+      if: steps.branch-check.outputs.branch-exists != 'true' && steps.deployment-check.outputs.deployment-exists != 'true'
+      run: |
+        if [[ $(kubectl get namespace -o=name $NAMESPACE --ignore-not-found) ]]; then
+          kubectl delete namespace $NAMESPACE
+        fi
+      shell: bash
+
+    - name: Skipping Teardown Namespace
+      if: steps.branch-check.outputs.branch-exists == 'true' || steps.deployment-check.outputs.deployment-exists == 'true'
+      run: |
+        echo "The $NAMESPACE namespace included resources that are unsafe to teardown. Close branches of the same name, ${{ github.event.ref }}, in other repositories to teardown namespace."
+      shell: bash
+      
