@@ -46,7 +46,7 @@ jobs:
       id-token: 'write'
 
     steps:
-      - name: Teardown Kubenetes Namespace
+      - name: Teardown Kubernetes Namespace
         uses: dmsi-io/gha-k8s-teardown@v1
         with:
           GCP_IDENTITY_PROVIDER: ${{ secrets.GCP_IDENTITY_PROVIDER }}
