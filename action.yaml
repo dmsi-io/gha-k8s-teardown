@@ -136,7 +136,7 @@ runs:
 
             if [[ $(git ls-remote "https://github.com/${{ github.repository_owner}}/$repo.git" "${{ github.event.ref }}") ]]; then
               echo "found ${{ github.event.ref }} branch in ${{ github.repository_owner}}/$repo"
-              echo "::set-output name=branch-exists::true"
+              echo "branch-exists=true" >> $GITHUB_OUTPUT
             else
               echo "could not find ${{ github.event.ref }} in ${{ github.repository_owner}}/$repo"
             fi 
@@ -169,7 +169,7 @@ runs:
 
             if [[ $NON_DEP_FOUND == 'true' ]]; then
               echo "$n found as non-dependency"
-              echo "::set-output name=deployment-exists::true"
+              echo "deployment-exists=true" >> $GITHUB_OUTPUT
             fi
         done
       shell: bash
