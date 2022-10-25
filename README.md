@@ -16,7 +16,7 @@ Additionally, it is recommended to use Workload Identity Federation. If this is 
 ## Inputs
 
 | NAME                    | DESCRIPTION                                                                              | TYPE     | REQUIRED | DEFAULT                                         |
-| ----------------------- | ---------------------------------------------------------------------------------------- | -------- | -------- | ----------------------------------------------- |
+|-------------------------|------------------------------------------------------------------------------------------|----------|----------|-------------------------------------------------|
 | `GCP_IDENTITY_PROVIDER` | GCP Workload Identity Provider.                                                          | `string` | `true`\* |                                                 |
 | `GCP_SERVICE_ACCOUNT`   | GCP Service Account email.                                                               | `string` | `true`\* |                                                 |
 | `GCP_SA_KEY`            | GCP Service Account Key (JSON).                                                          | `string` | `true`\* |                                                 |

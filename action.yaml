@@ -84,14 +84,14 @@ runs:
 
     - name: Setup GCloud Auth
       id: auth
-      uses: google-github-actions/auth@v0.4.0
+      uses: google-github-actions/auth@v0
       with:
         workload_identity_provider: ${{ inputs.GCP_IDENTITY_PROVIDER }}
         service_account: ${{ inputs.GCP_SERVICE_ACCOUNT }}
         credentials_json: ${{ inputs.GCP_SA_KEY }}
 
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.1
+      uses: google-github-actions/setup-gcloud@v0
 
     - name: Authenticate GKE cluster
       run: gcloud container clusters get-credentials ${{ inputs.GKE_CLUSTER_NAME }} --zone ${{ inputs.GCP_ZONE }} --project ${{ inputs.GCP_PROJECT_ID }}
