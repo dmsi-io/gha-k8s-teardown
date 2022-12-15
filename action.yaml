@@ -93,7 +93,7 @@ runs:
       uses: google-github-actions/setup-gcloud@v1
 
     - name: Authenticate GKE cluster
-      uses: 'google-github-actions/get-gke-credentials@v1'
+      uses: google-github-actions/get-gke-credentials@v1
       with:
         cluster_name: ${{ inputs.GKE_CLUSTER_NAME }}
         location: ${{ inputs.GCP_ZONE }}
